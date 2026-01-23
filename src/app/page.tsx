@@ -90,9 +90,14 @@ export default function Home() {
                 </h1>
               </div>
             </div>
+            <div className="text-center sm:text-left mt-2 mb-3 sm:mt-3 sm:mb-4">
+                <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-gray-300 leading-relaxed tracking-tight">
+                  택배 라우트 분석 - 지도와 구인정보를 입력하면<br className="sm:hidden" /> AI가 분석해 드립니다.
+                </h1>
+              </div>
           </div>
           
-          <div className="mt-0 sm:mt-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 sm:gap-4 mt-4 sm:mt-6">
             <a
               href="#"
               target="_blank"
@@ -100,22 +105,25 @@ export default function Home() {
               className="inline-flex flex-col items-center justify-center w-full sm:w-auto btn-primary text-base sm:text-lg lg:text-xl px-6 sm:px-8 py-3 sm:py-4"
             >
               <span className="flex items-left gap-2 mb-1">
-                <span className="text-xs sm:text-sm">NEW 1월 말 출시</span>
+                <span className="text-xs sm:text-sm">NEW 1월 말 택배앱 출시</span>
               </span>
               <span className="text-center leading-tight">
-                <span className="block">택배 기사가 만든 택배앱 "용카"</span>
+                <span className="block">택배 기사가 만든 "용카"</span>
               </span>
             </a>
-          </div>
                 
-          <a
-            href="https://open.kakao.com/o/gsedoMci"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center w-full sm:w-auto mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-gray-900 transition-all duration-300 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 border border-yellow-400/30 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-          >
-            <span>용카 오픈채팅방 참여하기</span>
-          </a>
+            <a
+              href="https://open.kakao.com/o/gsedoMci"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex flex-col items-center justify-center w-full sm:w-auto text-base sm:text-lg lg:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-gray-900 transition-all duration-300 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 border border-yellow-400/30 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            >
+              <span className="flex items-center gap-2 mb-1">
+                <span className="text-xs sm:text-sm">JOIN 출시 전 만나보세요</span>
+              </span>
+              <span className="text-center leading-tight">용카 오픈채팅방 참여하기</span>
+            </a>
+          </div>
         </div>
 
         {/* 탭 네비게이션 */}
