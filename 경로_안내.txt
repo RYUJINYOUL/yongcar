@@ -1,0 +1,27 @@
+📁 프로젝트 경로 안내
+====================
+
+✅ 올바른 프로젝트 경로:
+C:\Users\Administrator\Desktop\라우트분석
+
+🚀 PowerShell에서 이동하는 방법:
+cd "C:\Users\Administrator\Desktop\라우트분석"
+
+또는
+
+cd C:\Users\Administrator\Desktop\라우트분석
+
+📋 주요 디렉토리:
+- 프로젝트 루트: C:\Users\Administrator\Desktop\라우트분석
+- Python 백엔드: C:\Users\Administrator\Desktop\라우트분석\python_backend
+- Next.js 프론트: C:\Users\Administrator\Desktop\라우트분석\src
+
+💡 빠른 실행 방법:
+1. 파일 탐색기에서 프로젝트 폴더 열기
+2. start_backend.bat 더블클릭 (Python 백엔드 시작)
+3. 또는 npm run dev (Next.js 프론트엔드 - 이미 실행 중일 수 있음)
+
+
+
+
+
