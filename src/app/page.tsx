@@ -105,10 +105,10 @@ export default function Home() {
               className="inline-flex flex-col items-center justify-center w-full sm:w-auto btn-primary text-base sm:text-lg lg:text-xl px-6 sm:px-8 py-3 sm:py-4"
             >
               <span className="flex items-left gap-2 mb-1">
-                <span className="text-xs sm:text-sm">NEW 1월 말 택배앱 출시</span>
+                <span className="text-xs sm:text-sm">NEW 1월 31일 오픈</span>
               </span>
               <span className="text-center leading-tight">
-                <span className="block">택배 기사가 만든 "용카"</span>
+                <span className="block">택배기사 필수 앱 "용카"</span>
               </span>
             </a>
                 
@@ -119,9 +119,9 @@ export default function Home() {
               className="inline-flex flex-col items-center justify-center w-full sm:w-auto text-base sm:text-lg lg:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-gray-900 transition-all duration-300 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 border border-yellow-400/30 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
             >
               <span className="flex items-center gap-2 mb-1">
-                <span className="text-xs sm:text-sm">JOIN 자유게시판</span>
+                <span className="text-xs sm:text-sm">용카 오픈채팅방</span>
               </span>
-              <span className="text-center leading-tight">개선 의견 건의 남겨주세요</span>
+              <span className="text-center leading-tight">용카를 먼저 만나보세요</span>
             </a>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function Home() {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              분석 타임라인
+              타임라인
             </button>
           </div>
         </div>
