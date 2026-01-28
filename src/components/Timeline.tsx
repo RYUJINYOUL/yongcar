@@ -32,16 +32,16 @@ export default function Timeline({ onRefresh }: TimelineProps) {
 
   useEffect(() => {
     fetchTimeline()
-    
+
     // 분석 완료 이벤트 리스너
     const handleAnalysisCompleted = () => {
       setTimeout(() => {
         fetchTimeline()
       }, 1000) // 1초 후 새로고침 (Firebase 저장 시간 고려)
     }
-    
+
     window.addEventListener('analysis-completed', handleAnalysisCompleted)
-    
+
     return () => {
       window.removeEventListener('analysis-completed', handleAnalysisCompleted)
     }
@@ -51,12 +51,12 @@ export default function Timeline({ onRefresh }: TimelineProps) {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       console.log('타임라인 요청 시작')
       const response = await fetch('/api/timeline?limit=50')
-      
+
       console.log('타임라인 응답 상태:', response.status, response.statusText)
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.error || errorData.details || `서버 오류: ${response.status}`
@@ -66,7 +66,7 @@ export default function Timeline({ onRefresh }: TimelineProps) {
 
       const data = await response.json()
       console.log('타임라인 데이터 수신:', data.analyses?.length || 0, '개')
-      
+
       setAnalyses(data.analyses || [])
       setError(null)
     } catch (err: any) {
@@ -93,7 +93,7 @@ export default function Timeline({ onRefresh }: TimelineProps) {
       if (minutes < 60) return `${minutes}분 전`
       if (hours < 24) return `${hours}시간 전`
       if (days < 7) return `${days}일 전`
-      
+
       return date.toLocaleDateString('ko-KR', {
         year: 'numeric',
         month: 'long',
@@ -212,17 +212,17 @@ export default function Timeline({ onRefresh }: TimelineProps) {
           {/* 확장된 상세 정보 */}
           {expandedId === item.id && (
             <div className="mt-4 pt-4 border-t border-white/20">
-              <AnalysisResult 
+              <AnalysisResult
                 result={{
                   location: item.location,
                   routeGrade: item.routeGrade,
-                  warningPoints: typeof item.warningPoints === 'object' && !Array.isArray(item.warningPoints) 
-                    ? item.warningPoints 
+                  warningPoints: typeof item.warningPoints === 'object' && !Array.isArray(item.warningPoints)
+                    ? item.warningPoints
                     : {
-                        narrowAlley: Array.isArray(item.warningPoints) ? item.warningPoints[0] || '' : '',
-                        deadEnd: Array.isArray(item.warningPoints) ? item.warningPoints[1] || '' : '',
-                        noElevator: Array.isArray(item.warningPoints) ? item.warningPoints[2] || '' : ''
-                      },
+                      narrowAlley: Array.isArray(item.warningPoints) ? item.warningPoints[0] || '' : '',
+                      deadEnd: Array.isArray(item.warningPoints) ? item.warningPoints[1] || '' : '',
+                      noElevator: Array.isArray(item.warningPoints) ? item.warningPoints[2] || '' : ''
+                    },
                   parkingIssue: item.parkingIssue || '',
                   realIncome: item.realIncome || '정보 없음',
                   oneLiner: item.oneLiner || '',
@@ -231,12 +231,10 @@ export default function Timeline({ onRefresh }: TimelineProps) {
                     highTopEntry: '',
                     truckAccessibility: ''
                   },
-                  amenities: item.amenities || {
-                    restroom: '정보 없음',
-                    breakSpot: '정보 없음'
-                  },
-                  pickupTargets: item.pickupTargets || []
-                }} 
+                  fuelCost: item.fuelCost,
+                  zoneRatio: item.zoneRatio,
+                  redFlags: item.redFlags
+                }}
               />
             </div>
           )}

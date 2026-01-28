@@ -13,6 +13,17 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'analyze' | 'timeline'>('analyze')
+  
+  // 새로운 필드들
+  const [deliveryCompany, setDeliveryCompany] = useState('')
+  const [departureAddress, setDepartureAddress] = useState('')
+  const [terminalAddress, setTerminalAddress] = useState('')
+  const [warningFlags, setWarningFlags] = useState({
+    vehiclePurchase: false,
+    advancePayment: false,
+    unrealisticIncome: false
+  })
+  
   // 카카오톡 오픈채팅방으로 변경하여 모달 관련 state 제거
 
   const handleAnalyze = async () => {
@@ -34,6 +45,10 @@ export default function Home() {
       })
       formData.append('imageCount', mapImages.length.toString())
       formData.append('cafeText', cafeText)
+      formData.append('deliveryCompany', deliveryCompany)
+      formData.append('departureAddress', departureAddress)
+      formData.append('terminalAddress', terminalAddress)
+      formData.append('warningFlags', JSON.stringify(warningFlags))
       
       console.log('FormData 준비 완료, 서버로 전송 중...')
 
@@ -176,6 +191,109 @@ export default function Home() {
             <div className="card">
               <div className="mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                  기본 정보 입력
+                </h2>
+                <p className="text-gray-400 text-xs sm:text-sm">
+                  택배회사와 주소 정보를 입력하세요.
+                </p>
+              </div>
+              
+              {/* 택배회사 선택 */}
+              <div className="mb-4 sm:mb-6">
+                <label className="block text-sm sm:text-base font-semibold text-white mb-2">
+                  택배회사 선택 <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={deliveryCompany}
+                  onChange={(e) => setDeliveryCompany(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">택배회사를 선택하세요</option>
+                  <option value="씨제이">씨제이</option>
+                  <option value="쿠팡주간">쿠팡주간</option>
+                  <option value="쿠팡야간">쿠팡야간</option>
+                  <option value="롯데">롯데</option>
+                  <option value="한진">한진</option>
+                  <option value="로젠">로젠</option>
+                  <option value="씨제이오네">씨제이오네</option>
+                  <option value="야간기타택배">야간기타택배</option>
+                </select>
+              </div>
+
+              {/* 출발 주소 */}
+              <div className="mb-4 sm:mb-6">
+                <label className="block text-sm sm:text-base font-semibold text-white mb-2">
+                  출발 주소
+                </label>
+                <input
+                  type="text"
+                  value={departureAddress}
+                  onChange={(e) => setDepartureAddress(e.target.value)}
+                  placeholder="예: 서울시 강남구 테헤란로 123"
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* 터미널 주소 */}
+              <div className="mb-4 sm:mb-6">
+                <label className="block text-sm sm:text-base font-semibold text-white mb-2">
+                  터미널 주소
+                </label>
+                <input
+                  type="text"
+                  value={terminalAddress}
+                  onChange={(e) => setTerminalAddress(e.target.value)}
+                  placeholder="예: 경기도 수원시 영통구 월드컵로 456"
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white text-sm sm:text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* 경고 체크박스 (선택항목) */}
+              <div className="mb-4 sm:mb-6">
+                <label className="block text-sm sm:text-base font-semibold text-white mb-3">
+                  주의사항 (선택항목)
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={warningFlags.vehiclePurchase}
+                      onChange={(e) => setWarningFlags({ ...warningFlags, vehiclePurchase: e.target.checked })}
+                      className="w-5 h-5 text-blue-600 bg-gray-800 border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                    />
+                    <span className="ml-3 text-sm sm:text-base text-gray-300 group-hover:text-white transition-colors">
+                      차량 구매 및 할부 유도
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={warningFlags.advancePayment}
+                      onChange={(e) => setWarningFlags({ ...warningFlags, advancePayment: e.target.checked })}
+                      className="w-5 h-5 text-blue-600 bg-gray-800 border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                    />
+                    <span className="ml-3 text-sm sm:text-base text-gray-300 group-hover:text-white transition-colors">
+                      선입금 및 각종 비용 요구
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={warningFlags.unrealisticIncome}
+                      onChange={(e) => setWarningFlags({ ...warningFlags, unrealisticIncome: e.target.checked })}
+                      className="w-5 h-5 text-blue-600 bg-gray-800 border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                    />
+                    <span className="ml-3 text-sm sm:text-base text-gray-300 group-hover:text-white transition-colors">
+                      비현실적 고수익 및 조건
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
                   구인 정보 입력
                 </h2>
                 <p className="text-gray-400 text-xs sm:text-sm">
@@ -191,7 +309,7 @@ export default function Home() {
 
             <button
               onClick={handleAnalyze}
-              disabled={isLoading || mapImages.length === 0 || !cafeText.trim()}
+              disabled={isLoading || mapImages.length === 0 || !cafeText.trim() || !deliveryCompany}
               className={`w-full btn-primary text-base sm:text-lg lg:text-xl px-6 sm:px-8 py-3 sm:py-4 ${isLoading ? 'loading-pulse' : ''}`}
             >
               {isLoading ? (
