@@ -43,7 +43,9 @@ interface AnalysisResultProps {
 }
 
 export default function AnalysisResult({ result }: AnalysisResultProps) {
-  const naverMapLink = `https://map.naver.com/p/search/${encodeURIComponent(result.location.address)}`;
+  // 주소에서 괄호와 그 안의 내용 제거 (예: "서울 관악구 신림동 (일부 제외)" -> "서울 관악구 신림동")
+  const cleanAddress = result.location.address.replace(/\s*\(.*?\)\s*/g, '').trim();
+  const naverMapLink = `https://map.naver.com/p/search/${encodeURIComponent(cleanAddress)}`;
 
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href)
