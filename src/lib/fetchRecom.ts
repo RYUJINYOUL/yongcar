@@ -132,9 +132,8 @@ export function investmentDiscoverToRecomFilters(
 ): RecomReportFilters {
   const cat = category as RecomReportFilters['category'];
   const allowed = ['전체', '토지', '빌딩'] as const;
-  const minAiScore = filters.minAiScore ?? RECOM_INVESTMENT_MIN_AI_SCORE;
   const result: RecomReportFilters = {
-    minAiScore: Math.max(RECOM_INVESTMENT_MIN_AI_SCORE, minAiScore),
+    minAiScore: RECOM_INVESTMENT_MIN_AI_SCORE,
     category: (allowed as readonly string[]).includes(cat) ? cat : '전체',
   };
   if (isInvestmentPriceFilterActive(filters.priceMinEok, filters.priceMaxEok)) {

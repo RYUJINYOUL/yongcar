@@ -85,7 +85,20 @@ export function defaultInvestmentDiscoverFilters(): InvestmentDiscoverFilters {
 function defaultRecomInvestmentDiscoverFilters(): InvestmentDiscoverFilters {
   return {
     ...defaultInvestmentDiscoverFilters(),
-    minAiScore: RECOM_INVESTMENT_MIN_AI_SCORE,
+    // recom — 서버 50점+ 고정, 클라 AI 필터 UI 없음
+    minAiScore: null,
+    maxAiScore: null,
+  };
+}
+
+/** recom — localStorage·상태에 남은 AI 점수 필터 제거 (항상 서버 50점+) */
+export function normalizeRecomInvestmentDiscoverFilters(
+  filters: InvestmentDiscoverFilters,
+): InvestmentDiscoverFilters {
+  return {
+    ...filters,
+    minAiScore: null,
+    maxAiScore: null,
   };
 }
 
@@ -101,14 +114,8 @@ export function loadInvestmentDiscoverFilters(scope: MapFeedScope = 'home'): Inv
     if (merged.priceMinEok == null) merged.priceMinEok = 0;
     if (merged.priceMaxEok == null) merged.priceMaxEok = INVESTMENT_PRICE_FILTER_MAX_EOK;
     merged.priceMaxEok = normalizeInvestmentPriceMaxEok(merged.priceMaxEok, merged.priceMinEok);
-    if (merged.minAiScore != null && merged.minAiScore < RECOM_INVESTMENT_MIN_AI_SCORE) {
-      merged.minAiScore = RECOM_INVESTMENT_MIN_AI_SCORE;
-    }
-    if (merged.minAiScore == null) {
-      merged.minAiScore = RECOM_INVESTMENT_MIN_AI_SCORE;
-    }
     if (merged.zoningGroup == null) merged.zoningGroup = 'all';
-    return merged;
+    return normalizeRecomInvestmentDiscoverFilters(merged);
   } catch {
     return defaultRecomInvestmentDiscoverFilters();
   }
@@ -120,7 +127,8 @@ export function saveInvestmentDiscoverFilters(
 ) {
   if (typeof window === 'undefined') return;
   if (scope === 'home') return;
-  localStorage.setItem(investmentDiscoverFiltersStorageKey(scope), JSON.stringify(f));
+  const toSave = scope === 'recom' ? normalizeRecomInvestmentDiscoverFilters(f) : f;
+  localStorage.setItem(investmentDiscoverFiltersStorageKey(scope), JSON.stringify(toSave));
   window.dispatchEvent(new CustomEvent('investment-discover-filters-updated', { detail: { scope } }));
 }
 

@@ -1,13 +1,13 @@
 import {
   hasActiveInvestmentDiscoverFilters,
   isInvestmentDiscoverCategory,
+  normalizeRecomInvestmentDiscoverFilters,
   type InvestmentDiscoverFilters,
 } from './investmentDiscoverFilters';
 import type { ApartmentDiscoverFilters } from './apartmentDiscoverFilters';
 import { hasActiveApartmentCardFilters, hasStrictDataFilters } from './apartmentDiscoverFilters';
 import { isPyeongFilterActive } from './aptDiscoverArea';
 import { isPriceFilterActive } from './aptDiscoverPrice';
-import { RECOM_INVESTMENT_MIN_AI_SCORE } from './investmentDiscoverFilters';
 
 export type RecomQuickPickId =
   | 'land-1eok'
@@ -62,11 +62,7 @@ export { RECOM_INVESTMENT_MIN_AI_SCORE } from './investmentDiscoverFilters';
 export function applyRecomInvestmentQuickPick(
   filters: InvestmentDiscoverFilters,
 ): InvestmentDiscoverFilters {
-  return {
-    ...filters,
-    minAiScore: RECOM_INVESTMENT_MIN_AI_SCORE,
-    maxAiScore: null,
-  };
+  return normalizeRecomInvestmentDiscoverFilters(filters);
 }
 
 export function recomQuickPickCategory(id: RecomQuickPickId): string {
