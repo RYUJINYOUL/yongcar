@@ -45,10 +45,27 @@ export function parseParcelPolygon(geometry: unknown): LatLngPoint[] | null {
 }
 
 export function parseParcelPolygonFromVworldResponse(data: unknown): LatLngPoint[] | null {
+  return parseParcelFeatureFromVworldResponse(data)?.polygon ?? null;
+}
+
+export type ParsedParcelFeature = {
+  pnu: string | null;
+  addr: string | null;
+  polygon: LatLngPoint[];
+};
+
+export function parseParcelFeatureFromVworldResponse(data: unknown): ParsedParcelFeature | null {
   const feature = (data as { response?: { result?: { featureCollection?: { features?: unknown[] } } } })
     ?.response?.result?.featureCollection?.features?.[0];
   if (!feature || typeof feature !== 'object') return null;
-  return parseParcelPolygon((feature as { geometry?: unknown }).geometry);
+  const polygon = parseParcelPolygon((feature as { geometry?: unknown }).geometry);
+  if (!polygon || polygon.length < 3) return null;
+  const props = (feature as { properties?: Record<string, unknown> }).properties;
+  return {
+    pnu: props?.pnu != null ? String(props.pnu) : null,
+    addr: props?.addr != null ? String(props.addr) : null,
+    polygon,
+  };
 }
 
 /** 폴리곤 무게중심 */

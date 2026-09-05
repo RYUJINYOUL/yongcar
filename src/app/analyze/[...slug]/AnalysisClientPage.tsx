@@ -45,6 +45,7 @@ import AmenitiesView from '../../../components/AmenitiesView';
 import AiAnalysisBottomBar from '../../../components/AiAnalysisBottomBar';
 import AiReportView from '../../../components/AiReportView';
 import ComparableMap from '../../../components/ComparableMap';
+import type { ParcelMapSource } from '../../../components/ComparableMap';
 import AiAnalysisInputModal, {
     defaultAiAnalysisInput,
     isAiInputValid,
@@ -2962,21 +2963,73 @@ export default function AnalysisDetailPage({
     }, [reportData, report, mergedData, analysisData]);
 
     const mapDataForHeader = useMemo<any>(() => {
-        if (reportData?.analysisMetadata) {
-            return reportData.analysisMetadata;
-        }
         const latVal = report?.lat ?? mergedData?.lat ?? mergedData?.coordinates?.lat;
         const lngVal = report?.lng ?? mergedData?.lng ?? mergedData?.coordinates?.lng;
-        return {
-            target: {
-                lat: latVal,
-                lng: lngVal,
-                address: report?.address || mergedData?.address || '분석 대상지',
-            },
-            comparables: [],
-            targetArea: null,
-        };
-    }, [reportData, report, mergedData]);
+        const addr = report?.address || mergedData?.address || '분석 대상지';
+        const primaryPnu = report?.pnu ?? mergedData?.pnu ?? reportData?.analysisMetadata?.target?.pnu;
+        const multiPnu = rawData?.vitals?.multiPnu;
+
+        const base = reportData?.analysisMetadata
+            ? { ...reportData.analysisMetadata }
+            : {
+                target: { lat: latVal, lng: lngVal, address: addr },
+                comparables: [],
+                targetArea: null,
+            };
+
+        const existingTarget = (base.target || {}) as Record<string, unknown>;
+        base.target = {
+            ...existingTarget,
+            lat: existingTarget.lat ?? latVal,
+            lng: existingTarget.lng ?? lngVal,
+            address: existingTarget.address || existingTarget.platPlc || addr,
+            platPlc: existingTarget.platPlc || addr,
+            pnu: existingTarget.pnu ?? primaryPnu,
+        } as typeof base.target;
+
+        if (multiPnu?.parcels?.length) {
+            (base as Record<string, unknown>).multiPnu = multiPnu;
+        }
+
+        return base;
+    }, [reportData, report, mergedData, rawData]);
+
+    const parcelMapSources = useMemo((): ParcelMapSource[] => {
+        const addr = report?.address || mergedData?.address || '분석 대상지';
+        const latVal = report?.lat ?? mergedData?.lat ?? mergedData?.coordinates?.lat;
+        const lngVal = report?.lng ?? mergedData?.lng ?? mergedData?.coordinates?.lng;
+        const primaryPnu = report?.pnu ?? mergedData?.pnu ?? mapDataForHeader?.target?.pnu;
+        const sources: ParcelMapSource[] = [];
+
+        const multiPnu = rawData?.vitals?.multiPnu;
+        if (multiPnu?.parcels?.length) {
+            multiPnu.parcels.forEach((p: { pnu?: string; address?: string; isPrimary?: boolean }, idx: number) => {
+                const pnu = p?.pnu != null ? String(p.pnu).trim() : '';
+                if (pnu) {
+                    sources.push({
+                        pnu,
+                        label: p.address || addr,
+                        isPrimary: p.isPrimary === true || idx === 0,
+                    });
+                }
+            });
+            return sources;
+        }
+
+        const pnuStr = primaryPnu != null ? String(primaryPnu).trim() : '';
+        if (pnuStr.length === 19) {
+            sources.push({
+                pnu: pnuStr,
+                lat: latVal ?? null,
+                lng: lngVal ?? null,
+                label: addr,
+                isPrimary: true,
+            });
+        } else if (latVal != null && lngVal != null) {
+            sources.push({ lat: latVal, lng: lngVal, label: addr, isPrimary: true });
+        }
+        return sources;
+    }, [report, mergedData, rawData, mapDataForHeader?.target?.pnu]);
 
     const isAdmin = isAdminUser(user?.uid);
 
@@ -3616,6 +3669,7 @@ export default function AnalysisDetailPage({
                         {(mapDataForHeader?.target?.lat && mapDataForHeader?.target?.lng) ? (
                             <ComparableMap
                                 mapData={mapDataForHeader}
+                                parcelSources={parcelMapSources}
                                 category={report?.category}
                                 className="w-full h-full"
                                 onToggleFullscreen={() => setIsMapModalOpen(true)}
@@ -7013,6 +7067,7 @@ export default function AnalysisDetailPage({
                             <div className="flex-1 p-3 bg-slate-100">
                                 <ComparableMap
                                     mapData={mapDataForHeader}
+                                    parcelSources={parcelMapSources}
                                     category={report?.category}
                                     draggable={true}
                                     targetArea={(() => {

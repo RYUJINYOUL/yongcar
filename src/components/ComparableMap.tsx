@@ -3,6 +3,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin, X, Eye, Map, RefreshCw } from 'lucide-react';
 import { centerFromKakaoBounds } from '../lib/kakaoMapBounds';
+import {
+  fetchParcelBoundaries,
+  parcelBoundaryCentroid,
+  type ParcelBoundary,
+} from '../lib/fetchParcelBoundary';
+
+export type ParcelMapSource = {
+  pnu?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  label?: string | null;
+  isPrimary?: boolean;
+};
 
 export type ApartmentCompareMapMarker = {
     lat: number;
@@ -30,6 +43,10 @@ interface ComparableMapProps {
     apartmentCompareMarkers?: ApartmentCompareMapMarker[];
     /** compare 등 상단 UI와 겹칠 때 컨트롤 위치 */
     controlsPosition?: 'bottom-right' | 'top-right';
+    /** PNU·좌표 기준 필지 경계 (미전달 시 mapData.target에서 추론) */
+    parcelSources?: ParcelMapSource[];
+    /** false면 필지 폴리곤 숨김 (기본: 아파트 compare 제외 시 표시) */
+    showParcelBoundary?: boolean;
 }
 
 export default function ComparableMap({
@@ -45,6 +62,8 @@ export default function ComparableMap({
     fitAllMarkers = false,
     apartmentCompareMarkers,
     controlsPosition = 'bottom-right',
+    parcelSources,
+    showParcelBoundary,
 }: ComparableMapProps) {
     const isApartmentCompare = (apartmentCompareMarkers?.length ?? 0) > 0;
     const compareMarkersKey = apartmentCompareMarkers
@@ -99,6 +118,54 @@ export default function ComparableMap({
     // 로드뷰 마커 및 오버레이 인스턴스 보관 레퍼런스
     const rvMarkerRef = useRef<any>(null);
     const rvOverlayRef = useRef<any>(null);
+    const parcelOverlayRef = useRef<{ polygons: any[]; overlays: any[] }>({
+        polygons: [],
+        overlays: [],
+    });
+
+    const shouldShowParcelBoundary = showParcelBoundary ?? !isApartmentCompare;
+
+    const resolvedParcelSources = useMemo((): ParcelMapSource[] => {
+        if (parcelSources?.length) return parcelSources;
+        const t = mapData?.target || {};
+        const list: ParcelMapSource[] = [];
+        const primaryPnu = t.pnu != null ? String(t.pnu).trim() : '';
+        const lat = t.lat != null ? Number(t.lat) : NaN;
+        const lng = t.lng != null ? Number(t.lng) : NaN;
+        const label = t.platPlc || t.address || '분석 대상지';
+
+        const multi = mapData?.multiPnu?.parcels;
+        if (Array.isArray(multi) && multi.length > 0) {
+            multi.forEach((p: any, idx: number) => {
+                const pnu = p?.pnu != null ? String(p.pnu).trim() : '';
+                if (pnu) {
+                    list.push({
+                        pnu,
+                        label: p?.address || label,
+                        isPrimary: p?.isPrimary === true || idx === 0,
+                    });
+                }
+            });
+            if (list.length) return list;
+        }
+
+        if (primaryPnu.length === 19) {
+            list.push({
+                pnu: primaryPnu,
+                lat: Number.isFinite(lat) ? lat : null,
+                lng: Number.isFinite(lng) ? lng : null,
+                label,
+                isPrimary: true,
+            });
+        } else if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            list.push({ lat, lng, label, isPrimary: true });
+        }
+        return list;
+    }, [parcelSources, mapData?.target, mapData?.multiPnu]);
+
+    const parcelSourcesKey = resolvedParcelSources
+        .map((s) => `${s.pnu || ''}|${s.lat || ''}|${s.lng || ''}|${s.isPrimary ? 1 : 0}`)
+        .join(';');
 
     const target = mapData?.target || {};
     const comparables = useMemo(
@@ -479,6 +546,107 @@ export default function ComparableMap({
 
         return () => clearTimeout(timer);
     }, [isFullscreen, map, target.lat, target.lng, isCollapsed, isApartmentCompare, apartmentCompareMarkers, fitApartmentCompareBounds]);
+
+    // PNU 필지 경계 + 지번 라벨 (VWorld LP_PA_CBND_BUBUN)
+    useEffect(() => {
+        if (!map || !mapReady || isRoadview || !shouldShowParcelBoundary) return;
+
+        let cancelled = false;
+
+        const clearParcelOverlays = () => {
+            parcelOverlayRef.current.polygons.forEach((p) => p.setMap(null));
+            parcelOverlayRef.current.overlays.forEach((o) => o.setMap(null));
+            parcelOverlayRef.current = { polygons: [], overlays: [] };
+        };
+
+        const render = async () => {
+            clearParcelOverlays();
+            if (!resolvedParcelSources.length) return;
+
+            const fallbackAddr = target.platPlc || target.address || '분석 대상지';
+            const boundaries = await fetchParcelBoundaries(resolvedParcelSources, fallbackAddr);
+            if (cancelled || !boundaries.length) return;
+
+            const kakao = (window as any).kakao;
+            const bounds = new kakao.maps.LatLngBounds();
+            let hasBounds = false;
+
+            if (fitAllMarkers) {
+                const targetLat = parseFloat(target.lat);
+                const targetLng = parseFloat(target.lng);
+                if (!isNaN(targetLat) && !isNaN(targetLng)) {
+                    bounds.extend(new kakao.maps.LatLng(targetLat, targetLng));
+                    hasBounds = true;
+                }
+                comparables.forEach((c: any) => {
+                    const cLat = parseFloat(c.lat);
+                    const cLng = parseFloat(c.lng);
+                    if (!isNaN(cLat) && !isNaN(cLng)) {
+                        bounds.extend(new kakao.maps.LatLng(cLat, cLng));
+                        hasBounds = true;
+                    }
+                });
+            }
+
+            boundaries.forEach((b: ParcelBoundary) => {
+                const stroke = b.isPrimary ? '#0EA5E9' : '#10B981';
+                const polygon = new kakao.maps.Polygon({
+                    path: b.polygon.map((pt) => new kakao.maps.LatLng(pt.lat, pt.lng)),
+                    strokeWeight: 2.5,
+                    strokeColor: stroke,
+                    strokeOpacity: 0.95,
+                    fillColor: stroke,
+                    fillOpacity: 0.16,
+                    zIndex: b.isPrimary ? 12 : 11,
+                });
+                polygon.setMap(map);
+                parcelOverlayRef.current.polygons.push(polygon);
+
+                b.polygon.forEach((pt) => {
+                    bounds.extend(new kakao.maps.LatLng(pt.lat, pt.lng));
+                    hasBounds = true;
+                });
+
+                const centroid = parcelBoundaryCentroid(b);
+                if (centroid && b.label) {
+                    const el = document.createElement('div');
+                    el.innerHTML = `<div style="padding:4px 8px;background:#fff;border:1px solid #cbd5e1;border-radius:6px;font-size:11px;font-weight:800;color:#0f172a;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.12);transform:translate(-50%,-100%);">${String(b.label).replace(/</g, '&lt;')}</div>`;
+                    const overlay = new kakao.maps.CustomOverlay({
+                        position: new kakao.maps.LatLng(centroid.lat, centroid.lng),
+                        content: el,
+                        yAnchor: 1.2,
+                        zIndex: 25,
+                    });
+                    overlay.setMap(map);
+                    parcelOverlayRef.current.overlays.push(overlay);
+                }
+            });
+
+            if (hasBounds) {
+                map.setBounds(bounds);
+            }
+        };
+
+        void render();
+
+        return () => {
+            cancelled = true;
+            clearParcelOverlays();
+        };
+    }, [
+        map,
+        mapReady,
+        isRoadview,
+        shouldShowParcelBoundary,
+        parcelSourcesKey,
+        target.lat,
+        target.lng,
+        target.address,
+        target.platPlc,
+        fitAllMarkers,
+        comparablesKey,
+        resolvedParcelSources,
+    ]);
 
     const roadviewLabel = roadviewFocus?.label
         ?? (selectedComp?.compareApartment ? selectedComp.label : null)
