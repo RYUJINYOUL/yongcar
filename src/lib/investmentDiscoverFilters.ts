@@ -1,5 +1,7 @@
 import { PRICE_FILTER_MAX_EOK } from './aptDiscoverPrice';
 import type { MapFeedScope } from './homeMapSession';
+import type { RecomZoningGroup } from './recomZoningFilters';
+import { formatRecomZoningFilterLabel } from './recomZoningFilters';
 
 /** 토지·빌딩·주택·상가 예산 필터 상한 (억) */
 export const INVESTMENT_PRICE_FILTER_MAX_EOK = 1000;
@@ -50,6 +52,8 @@ export type InvestmentDiscoverFilters = {
   minAiScore: number | null;
   maxAiScore: number | null;
   sortBy: InvestmentDiscoverSort;
+  /** recom — 용도 4분류 (클라 필터) */
+  zoningGroup: RecomZoningGroup;
 };
 
 export const INVESTMENT_DISCOVER_FILTERS_KEY = 'investment_discover_filters_v1';
@@ -74,6 +78,7 @@ export function defaultInvestmentDiscoverFilters(): InvestmentDiscoverFilters {
     minAiScore: null,
     maxAiScore: null,
     sortBy: 'recent',
+    zoningGroup: 'all',
   };
 }
 
@@ -102,6 +107,7 @@ export function loadInvestmentDiscoverFilters(scope: MapFeedScope = 'home'): Inv
     if (merged.minAiScore == null) {
       merged.minAiScore = RECOM_INVESTMENT_MIN_AI_SCORE;
     }
+    if (merged.zoningGroup == null) merged.zoningGroup = 'all';
     return merged;
   } catch {
     return defaultRecomInvestmentDiscoverFilters();
@@ -203,18 +209,25 @@ function eokToMan(eok: number): number {
 export function passesInvestmentDiscoverFilters(
   item: {
     budgetMan?: number | null;
+    listingPriceMan?: number | null;
+    zoningGroup?: string | null;
     propertyGrade?: { riskScore?: string | number | null };
   },
   filters: InvestmentDiscoverFilters,
+  options?: { skipPrice?: boolean },
 ): boolean {
-  if (isInvestmentPriceFilterActive(filters.priceMinEok, filters.priceMaxEok)) {
-    const man = item.budgetMan;
+  if (!options?.skipPrice && isInvestmentPriceFilterActive(filters.priceMinEok, filters.priceMaxEok)) {
+    const man = item.listingPriceMan ?? item.budgetMan;
     if (man == null || !Number.isFinite(man)) return false;
     const minMan = eokToMan(filters.priceMinEok);
     const maxMan = filters.priceMaxEok >= INVESTMENT_PRICE_FILTER_MAX_EOK
       ? Number.MAX_SAFE_INTEGER
       : eokToMan(filters.priceMaxEok);
     if (man < minMan || man > maxMan) return false;
+  }
+
+  if (filters.zoningGroup !== 'all') {
+    if (item.zoningGroup !== filters.zoningGroup) return false;
   }
 
   const score = resolveAnalysisAiScore(item);
@@ -271,13 +284,17 @@ export function hasActiveInvestmentDiscoverFilters(filters: InvestmentDiscoverFi
     isInvestmentPriceFilterActive(filters.priceMinEok, filters.priceMaxEok)
     || isInvestmentAiFilterActive(filters)
     || filters.sortBy !== 'recent'
+    || filters.zoningGroup !== 'all'
   );
 }
 
 export function investmentDiscoverFilterHints(filters: InvestmentDiscoverFilters): string[] {
   const hints: string[] = [];
   if (isInvestmentPriceFilterActive(filters.priceMinEok, filters.priceMaxEok)) {
-    hints.push(`가격 ${formatInvestmentPriceFilterLabel(filters.priceMinEok, filters.priceMaxEok)} — 가격 정보가 없는 매물은 제외됩니다`);
+    hints.push(`가격 ${formatInvestmentPriceFilterLabel(filters.priceMinEok, filters.priceMaxEok)} — 제시가 기준 · 가격 없는 매물 제외`);
+  }
+  if (filters.zoningGroup !== 'all') {
+    hints.push(`용도 ${formatRecomZoningFilterLabel(filters.zoningGroup)}`);
   }
   if (filters.minAiScore != null) {
     hints.push(`AI ${filters.minAiScore}점 이상만 표시`);

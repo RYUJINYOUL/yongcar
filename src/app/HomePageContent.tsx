@@ -1682,7 +1682,7 @@ export function HomePageContent({ feedMode = 'home' }: { feedMode?: MapFeedMode 
     }
     if (isInvestmentDiscoverCategory(selectedCategory)) {
       if (feedMode === 'recom') {
-        list = list.filter((a) => passesInvestmentDiscoverFilters(a, investmentFilters));
+        list = list.filter((a) => passesInvestmentDiscoverFilters(a, investmentFilters, { skipPrice: true }));
         return sortInvestmentDiscoverList(list, investmentFilters);
       }
       return list;

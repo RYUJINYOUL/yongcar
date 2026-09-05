@@ -3,6 +3,10 @@ import type { InvestmentDiscoverFilters } from './investmentDiscoverFilters';
 import { RECOM_INVESTMENT_MIN_AI_SCORE } from './investmentDiscoverFilters';
 import type { RecomApartmentFilters, RecomReportFilters } from './recomFilters';
 import { apartmentFiltersToParams, reportFiltersToParams } from './recomFilters';
+import {
+  INVESTMENT_PRICE_FILTER_MAX_EOK,
+  isInvestmentPriceFilterActive,
+} from './investmentDiscoverFilters';
 import { mapR114LiteDiscoverToFeedItem, type R114LiteDiscoverItem } from './fetchR114LiteDiscover';
 
 export type RecomApartmentItem = {
@@ -38,6 +42,9 @@ export type RecomReportItem = {
   lng: number | null;
   bldNm?: string | null;
   budgetMan?: number | null;
+  listingPriceMan?: number | null;
+  zoningGroup?: string | null;
+  zoningLabel?: string | null;
   aiScore: number;
   detectiveNote?: string | null;
   oneLiner?: string | null;
@@ -126,10 +133,17 @@ export function investmentDiscoverToRecomFilters(
   const cat = category as RecomReportFilters['category'];
   const allowed = ['전체', '토지', '빌딩'] as const;
   const minAiScore = filters.minAiScore ?? RECOM_INVESTMENT_MIN_AI_SCORE;
-  return {
+  const result: RecomReportFilters = {
     minAiScore: Math.max(RECOM_INVESTMENT_MIN_AI_SCORE, minAiScore),
     category: (allowed as readonly string[]).includes(cat) ? cat : '전체',
   };
+  if (isInvestmentPriceFilterActive(filters.priceMinEok, filters.priceMaxEok)) {
+    if (filters.priceMinEok > 0) result.priceMinEok = filters.priceMinEok;
+    if (filters.priceMaxEok < INVESTMENT_PRICE_FILTER_MAX_EOK) {
+      result.priceMaxEok = filters.priceMaxEok;
+    }
+  }
+  return result;
 }
 
 export function mapRecomApartmentToFeedItem(item: RecomApartmentItem) {
@@ -179,6 +193,9 @@ export function mapRecomReportToFeedItem(item: RecomReportItem) {
       riskScore: String(aiScore),
     },
     budgetMan: item.budgetMan ?? null,
+    listingPriceMan: item.listingPriceMan ?? null,
+    zoningGroup: item.zoningGroup ?? null,
+    zoningLabel: item.zoningLabel ?? null,
     hasReport: true,
     latestReportId: item.id,
     createdAt: item.createdAt ?? new Date().toISOString(),

@@ -1,21 +1,20 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   INVESTMENT_PRICE_FILTER_MAX_EOK,
-  INVESTMENT_PRICE_FILTER_STEP_EOK,
+  INVESTMENT_SORT_OPTIONS,
   RECOM_INVESTMENT_MIN_SCORE_PRESETS,
   RECOM_INVESTMENT_MIN_AI_SCORE,
-  INVESTMENT_PRICE_MAX_PRESETS_EOK,
-  INVESTMENT_SORT_OPTIONS,
-  applyInvestmentPriceMaxEok,
   isInvestmentMinScorePresetActive,
-  isInvestmentPriceMaxPresetActive,
   toggleInvestmentMinScorePreset,
   type InvestmentDiscoverFilters,
   type InvestmentDiscoverSort,
 } from '../lib/investmentDiscoverFilters';
+import {
+  RECOM_ZONING_CHIP_OPTIONS,
+} from '../lib/recomZoningFilters';
 
 type Props = {
   open: boolean;
@@ -24,6 +23,25 @@ type Props = {
   onClose: () => void;
   onApply: (f: InvestmentDiscoverFilters) => void;
 };
+
+function SectionHeader({
+  title,
+  onReset,
+}: {
+  title: string;
+  onReset?: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h4 className="text-[15px] font-black text-slate-900">{title}</h4>
+      {onReset && (
+        <button type="button" className="text-[13px] font-bold text-violet-600" onClick={onReset}>
+          초기화
+        </button>
+      )}
+    </div>
+  );
+}
 
 const DUAL_RANGE_INPUT_CLASS =
   'absolute w-[calc(100%-0.5rem)] left-1 h-10 pointer-events-auto bg-transparent appearance-none cursor-pointer ' +
@@ -36,21 +54,13 @@ const DUAL_RANGE_INPUT_CLASS =
   '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-slate-900 ' +
   '[&::-moz-range-thumb]:shadow-sm';
 
-function snapInvestmentPriceEok(raw: number): number {
-  const snapped = Math.round(raw / INVESTMENT_PRICE_FILTER_STEP_EOK) * INVESTMENT_PRICE_FILTER_STEP_EOK;
-  return Math.min(Math.max(snapped, 0), INVESTMENT_PRICE_FILTER_MAX_EOK);
-}
-
-function formatPriceEnd(n: number): string {
-  return n >= INVESTMENT_PRICE_FILTER_MAX_EOK ? '최대' : `${n}억`;
-}
-
 function DualRangeRow({
   min,
   max,
   floor,
   ceil,
   step,
+  format,
   onChange,
 }: {
   min: number;
@@ -58,6 +68,7 @@ function DualRangeRow({
   floor: number;
   ceil: number;
   step: number;
+  format: (n: number) => string;
   onChange: (min: number, max: number) => void;
 }) {
   const [activeThumb, setActiveThumb] = useState<'min' | 'max' | null>(null);
@@ -78,20 +89,20 @@ function DualRangeRow({
   }, []);
 
   const handleMinChange = (raw: number) => {
-    const clamped = Math.min(snapInvestmentPriceEok(raw), max);
+    const clamped = Math.min(raw, max);
     onChange(clamped, max);
   };
 
   const handleMaxChange = (raw: number) => {
-    const clamped = Math.max(snapInvestmentPriceEok(raw), min);
+    const clamped = Math.max(raw, min);
     onChange(min, clamped);
   };
 
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-[10px] font-bold text-slate-400 px-0.5">
-        <span>0억</span>
-        <span>{INVESTMENT_PRICE_FILTER_MAX_EOK}억+</span>
+        <span>{format(floor)}</span>
+        <span>{format(ceil)}</span>
       </div>
       <div className="relative h-10 flex items-center px-1 touch-none">
         <div
@@ -136,7 +147,7 @@ function DualRangeRow({
         />
       </div>
       <p className="text-center text-xs font-bold text-slate-700">
-        {min}억 ~ {formatPriceEnd(max)}
+        {format(min)} ~ {format(max)}
       </p>
     </div>
   );
@@ -150,10 +161,19 @@ export default function InvestmentDiscoverFilterSheet({
   onApply,
 }: Props) {
   const [draft, setDraft] = useState(filters);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) setDraft(filters);
   }, [open, filters]);
+
+  useEffect(() => {
+    if (!open || !scrollSection || !scrollRef.current) return;
+    const el = scrollRef.current.querySelector(`[data-section="${scrollSection}"]`);
+    if (el instanceof HTMLElement) {
+      requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  }, [open, scrollSection]);
 
   if (!open || typeof document === 'undefined') return null;
 
@@ -162,110 +182,123 @@ export default function InvestmentDiscoverFilterSheet({
     onClose();
   };
 
+  const formatPrice = (n: number) => (
+    n >= INVESTMENT_PRICE_FILTER_MAX_EOK ? '최대' : `${n}억`
+  );
+
   const content = (
     <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center">
       <button type="button" className="absolute inset-0 bg-black/40" aria-label="닫기" onClick={onClose} />
-      <div className="relative w-full max-w-md max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 pb-8">
+      <div
+        ref={scrollRef}
+        className="relative w-full max-w-md max-h-[85vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 pb-8"
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-black text-slate-900">매물 필터</h3>
           <button type="button" onClick={onClose} className="text-slate-400 text-sm font-bold">닫기</button>
         </div>
 
-        <section className="mb-6" data-section="price">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-black text-slate-900">예산 (억)</h4>
-            <button
-              type="button"
-              className="text-xs font-bold text-violet-600"
-              onClick={() => setDraft((d) => ({
-                ...d,
-                priceMinEok: 0,
-                priceMaxEok: INVESTMENT_PRICE_FILTER_MAX_EOK,
-              }))}
-            >
-              초기화
-            </button>
-          </div>
-          <p className="text-[10px] text-slate-500 mb-2">제시가 우선 · 없으면 AI 추정가 · 가격 정보 없는 매물 제외</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {INVESTMENT_PRICE_MAX_PRESETS_EOK.map((eok) => (
-              <button
-                key={eok}
-                type="button"
-                onClick={() => setDraft((d) => applyInvestmentPriceMaxEok(d, eok))}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${
-                  isInvestmentPriceMaxPresetActive(draft, eok)
-                    ? 'bg-emerald-500 text-white border-emerald-500'
-                    : 'bg-white text-slate-600 border-slate-200'
-                }`}
-              >
-                ~{eok}억
-              </button>
-            ))}
-          </div>
-          <p className="text-[10px] text-slate-400 mb-2">상세 구간 (5억 단위)</p>
+        <section className="mb-8" data-section="price">
+          <SectionHeader
+            title="가격"
+            onReset={() => setDraft((d) => ({
+              ...d,
+              priceMinEok: 0,
+              priceMaxEok: INVESTMENT_PRICE_FILTER_MAX_EOK,
+            }))}
+          />
+          <p className="text-[10px] text-slate-500 mb-3">제시가 기준 · 가격 없는 매물 제외</p>
           <DualRangeRow
-            min={draft.priceMinEok}
-            max={draft.priceMaxEok}
             floor={0}
             ceil={INVESTMENT_PRICE_FILTER_MAX_EOK}
-            step={INVESTMENT_PRICE_FILTER_STEP_EOK}
-            onChange={(priceMinEok, priceMaxEok) => setDraft((d) => ({ ...d, priceMinEok, priceMaxEok }))}
+            step={1}
+            min={draft.priceMinEok}
+            max={draft.priceMaxEok}
+            format={formatPrice}
+            onChange={(priceMinEok, priceMaxEok) => setDraft((d) => ({
+              ...d,
+              priceMinEok,
+              priceMaxEok: priceMaxEok >= INVESTMENT_PRICE_FILTER_MAX_EOK
+                ? INVESTMENT_PRICE_FILTER_MAX_EOK
+                : priceMaxEok,
+            }))}
           />
         </section>
 
-        <section className="mb-6" data-section="ai">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-black text-slate-900">AI 점수</h4>
-            <button
-              type="button"
-              className="text-xs font-bold text-violet-600"
-              onClick={() => setDraft((d) => ({ ...d, minAiScore: null, maxAiScore: null }))}
-            >
-              초기화
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {RECOM_INVESTMENT_MIN_SCORE_PRESETS.map((score) => (
+        <section className="mb-8" data-section="zoning">
+          <SectionHeader
+            title="용도"
+            onReset={() => setDraft((d) => ({ ...d, zoningGroup: 'all' }))}
+          />
+          <div className="flex flex-wrap gap-2">
+            {RECOM_ZONING_CHIP_OPTIONS.map((opt) => (
               <button
-                key={score}
+                key={opt.id}
                 type="button"
-                onClick={() => setDraft((d) => toggleInvestmentMinScorePreset(d, score))}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${
-                  isInvestmentMinScorePresetActive(draft, score)
-                    ? 'bg-emerald-500 text-white border-emerald-500'
-                    : 'bg-white text-slate-600 border-slate-200'
+                onClick={() => setDraft((d) => ({
+                  ...d,
+                  zoningGroup: d.zoningGroup === opt.id ? 'all' : opt.id,
+                }))}
+                className={`px-4 py-2.5 rounded-xl text-[13px] font-bold border transition-colors ${
+                  draft.zoningGroup === opt.id
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-800 border-slate-200'
                 }`}
               >
-                {score}점 이상
+                {opt.label}
               </button>
             ))}
           </div>
-          <label className="block text-[11px] font-bold text-slate-600 mb-1">최소 AI 점수 (슬라이더)</label>
-          <input
-            type="range"
-            min={RECOM_INVESTMENT_MIN_AI_SCORE}
-            max={100}
-            step={5}
-            value={draft.minAiScore ?? RECOM_INVESTMENT_MIN_AI_SCORE}
-            className="w-full accent-slate-900"
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setDraft((d) => ({
-                ...d,
-                minAiScore: v < RECOM_INVESTMENT_MIN_AI_SCORE ? null : v,
-              }));
-            }}
-          />
-          <p className="text-xs font-bold text-slate-700 mt-1">
-            {draft.minAiScore != null && draft.minAiScore >= RECOM_INVESTMENT_MIN_AI_SCORE
-              ? `${draft.minAiScore}점 이상`
-              : `${RECOM_INVESTMENT_MIN_AI_SCORE}점 이상 (기본)`}
-          </p>
         </section>
 
-        <section className="mb-6" data-section="sort">
-          <h4 className="text-sm font-black text-slate-900 mb-3">정렬</h4>
+        {RECOM_INVESTMENT_MIN_SCORE_PRESETS.length > 0 && (
+          <section className="mb-8" data-section="ai">
+            <SectionHeader
+              title="AI 점수"
+              onReset={() => setDraft((d) => ({ ...d, minAiScore: null, maxAiScore: null }))}
+            />
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {RECOM_INVESTMENT_MIN_SCORE_PRESETS.map((score) => (
+                <button
+                  key={score}
+                  type="button"
+                  onClick={() => setDraft((d) => toggleInvestmentMinScorePreset(d, score))}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-colors ${
+                    isInvestmentMinScorePresetActive(draft, score)
+                      ? 'bg-emerald-500 text-white border-emerald-500'
+                      : 'bg-white text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {score}점 이상
+                </button>
+              ))}
+            </div>
+            <label className="block text-[11px] font-bold text-slate-600 mb-1">최소 AI 점수 (슬라이더)</label>
+            <input
+              type="range"
+              min={RECOM_INVESTMENT_MIN_AI_SCORE}
+              max={100}
+              step={5}
+              value={draft.minAiScore ?? RECOM_INVESTMENT_MIN_AI_SCORE}
+              className="w-full accent-slate-900"
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setDraft((d) => ({
+                  ...d,
+                  minAiScore: v < RECOM_INVESTMENT_MIN_AI_SCORE ? null : v,
+                }));
+              }}
+            />
+            <p className="text-xs font-bold text-slate-700 mt-1">
+              {draft.minAiScore != null && draft.minAiScore >= RECOM_INVESTMENT_MIN_AI_SCORE
+                ? `${draft.minAiScore}점 이상`
+                : `${RECOM_INVESTMENT_MIN_AI_SCORE}점 이상 (기본)`}
+            </p>
+          </section>
+        )}
+
+        <section className="mb-8" data-section="sort">
+          <SectionHeader title="정렬" />
           <div className="flex flex-wrap gap-2">
             {INVESTMENT_SORT_OPTIONS.map((opt) => (
               <button

@@ -11,6 +11,8 @@ export type RecomApartmentFilters = {
 export type RecomReportFilters = {
   minAiScore: number;
   category: '전체' | '토지' | '빌딩';
+  priceMinEok?: number;
+  priceMaxEok?: number;
 };
 
 export const RECOM_REPORT_CATEGORIES = ['전체', '토지', '빌딩'] as const;
@@ -37,10 +39,21 @@ export function apartmentFiltersToParams(f: RecomApartmentFilters): URLSearchPar
   return params;
 }
 
+import { INVESTMENT_PRICE_FILTER_MAX_EOK } from './investmentDiscoverFilters';
+
 export function reportFiltersToParams(f: RecomReportFilters): URLSearchParams {
   const params = new URLSearchParams();
   params.set('minAiScore', String(f.minAiScore));
   if (f.category !== '전체') params.set('category', f.category);
+  if (f.priceMinEok != null && f.priceMinEok > 0) {
+    params.set('priceMinEok', String(f.priceMinEok));
+  }
+  if (
+    f.priceMaxEok != null
+    && f.priceMaxEok < INVESTMENT_PRICE_FILTER_MAX_EOK
+  ) {
+    params.set('priceMaxEok', String(f.priceMaxEok));
+  }
   return params;
 }
 
