@@ -62,6 +62,7 @@ function DualRangeRow({
   step,
   format,
   onChange,
+  showSummary = true,
 }: {
   min: number;
   max: number;
@@ -70,6 +71,7 @@ function DualRangeRow({
   step: number;
   format: (n: number) => string;
   onChange: (min: number, max: number) => void;
+  showSummary?: boolean;
 }) {
   const [activeThumb, setActiveThumb] = useState<'min' | 'max' | null>(null);
 
@@ -146,9 +148,115 @@ function DualRangeRow({
           }}
         />
       </div>
-      <p className="text-center text-xs font-bold text-slate-700">
-        {format(min)} ~ {format(max)}
-      </p>
+      {showSummary && (
+        <p className="text-center text-xs font-bold text-slate-700">
+          {format(min)} ~ {format(max)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const PRICE_EOK_INPUT_CLASS =
+  'w-[4.5rem] px-2 py-2 rounded-xl text-sm font-bold border border-slate-200 text-slate-900 text-center ' +
+  'focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400/30 ' +
+  '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+
+function clampPriceEok(raw: number): number {
+  return Math.min(Math.max(Math.round(raw), 0), INVESTMENT_PRICE_FILTER_MAX_EOK);
+}
+
+function PriceEokManualInputs({
+  minEok,
+  maxEok,
+  onChange,
+}: {
+  minEok: number;
+  maxEok: number;
+  onChange: (min: number, max: number) => void;
+}) {
+  const [minText, setMinText] = useState(String(minEok));
+  const [maxText, setMaxText] = useState(
+    maxEok >= INVESTMENT_PRICE_FILTER_MAX_EOK ? '' : String(maxEok),
+  );
+
+  useEffect(() => {
+    setMinText(String(minEok));
+    setMaxText(maxEok >= INVESTMENT_PRICE_FILTER_MAX_EOK ? '' : String(maxEok));
+  }, [minEok, maxEok]);
+
+  const applyMin = () => {
+    const trimmed = minText.trim();
+    const parsed = trimmed === '' ? 0 : Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      setMinText(String(minEok));
+      return;
+    }
+    const nextMin = clampPriceEok(parsed);
+    const nextMax = Math.max(nextMin, maxEok);
+    onChange(nextMin, nextMax);
+  };
+
+  const applyMax = () => {
+    const trimmed = maxText.trim();
+    if (trimmed === '') {
+      onChange(minEok, INVESTMENT_PRICE_FILTER_MAX_EOK);
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      setMaxText(maxEok >= INVESTMENT_PRICE_FILTER_MAX_EOK ? '' : String(maxEok));
+      return;
+    }
+    const nextMax = clampPriceEok(parsed);
+    const nextMin = Math.min(minEok, nextMax);
+    onChange(nextMin, Math.max(nextMin, nextMax));
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-3">
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min={0}
+          max={INVESTMENT_PRICE_FILTER_MAX_EOK}
+          inputMode="numeric"
+          aria-label="최소 가격 (억)"
+          value={minText}
+          onChange={(e) => setMinText(e.target.value.replace(/[^\d]/g, ''))}
+          onBlur={applyMin}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              applyMin();
+            }
+          }}
+          className={PRICE_EOK_INPUT_CLASS}
+        />
+        <span className="text-xs font-bold text-slate-500">억</span>
+      </div>
+      <span className="text-xs font-bold text-slate-400">~</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min={0}
+          max={INVESTMENT_PRICE_FILTER_MAX_EOK}
+          inputMode="numeric"
+          placeholder="최대"
+          aria-label="최대 가격 (억)"
+          value={maxText}
+          onChange={(e) => setMaxText(e.target.value.replace(/[^\d]/g, ''))}
+          onBlur={applyMax}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              applyMax();
+            }
+          }}
+          className={PRICE_EOK_INPUT_CLASS}
+        />
+        <span className="text-xs font-bold text-slate-500">억</span>
+      </div>
     </div>
   );
 }
@@ -215,12 +323,22 @@ export default function InvestmentDiscoverFilterSheet({
             min={draft.priceMinEok}
             max={draft.priceMaxEok}
             format={formatPrice}
+            showSummary={false}
             onChange={(priceMinEok, priceMaxEok) => setDraft((d) => ({
               ...d,
               priceMinEok,
               priceMaxEok: priceMaxEok >= INVESTMENT_PRICE_FILTER_MAX_EOK
                 ? INVESTMENT_PRICE_FILTER_MAX_EOK
                 : priceMaxEok,
+            }))}
+          />
+          <PriceEokManualInputs
+            minEok={draft.priceMinEok}
+            maxEok={draft.priceMaxEok}
+            onChange={(priceMinEok, priceMaxEok) => setDraft((d) => ({
+              ...d,
+              priceMinEok,
+              priceMaxEok,
             }))}
           />
         </section>
